@@ -38,7 +38,7 @@ sudo ufw default allow outgoing
 
 Перед добавлением правила проверил слушающие сокеты командой `sudo ss -lntup`. Процесс `sshd` слушал `22/tcp` на IPv4 и IPv6.
 
-![Слушающие сокеты Debian и порт SSH](listening-ports.png)
+![Слушающие сокеты Debian и порт SSH](screenshots/listening-ports.png)
 
 Добавил правило для подключения из Windows перед включением фильтра.
 
@@ -50,7 +50,7 @@ sudo ufw status verbose
 
 UFW показал `Status: active`, запрет входящих и разрешение исходящих соединений по умолчанию. Правило `22/tcp on enp0s8` разрешает входящий SSH с IPv4-адреса Windows `192.168.56.1` через Host-only.
 
-![Активный UFW и правило SSH](ufw-status.png)
+![Активный UFW и правило SSH](screenshots/ufw-status.png)
 
 После включения UFW я открыл новый SSH-сеанс из Windows и успешно вошёл в Debian.
 
@@ -65,7 +65,7 @@ sudo ufw status numbered
 
 В списке появилась строка `DENY IN` для этого источника.
 
-![Правило UFW для блокировки учебного IP](ufw-deny-ip-status.png)
+![Правило UFW для блокировки учебного IP](screenshots/ufw-deny-ip-status.png)
 
 ### Проверка LIMIT на исходном порту
 
@@ -78,7 +78,7 @@ sudo ufw status numbered
 
 Действие изменилось на `LIMIT IN`. Обычный вход по SSH после изменения прошёл. Для нового порта `6262` в следующем разделе использовал действие `ALLOW`.
 
-![Ограничение частоты SSH-подключений на исходном порту](ufw-limit-ssh-status.png)
+![Ограничение частоты SSH-подключений на исходном порту](screenshots/ufw-limit-ssh-status.png)
 
 ## Перенос SSH на порт 6262
 
@@ -118,7 +118,7 @@ sudo ufw status numbered
 
    Процесс `sshd` слушал оба порта на IPv4 и IPv6.
 
-   ![SSH слушает старый и новый порты на время проверки](ssh-listening-22-and-6262.png)
+   ![SSH слушает старый и новый порты на время проверки](screenshots/ssh-listening-22-and-6262.png)
 
 5. **В новом окне Windows PowerShell** проверил вход через новый порт. Ключ `-p` задаёт порт назначения.
 
@@ -137,7 +137,7 @@ sudo ufw status numbered
 
    В выводе остались только заголовки.
 
-   ![На порту 22 больше нет слушающего сокета](ssh-port-22-not-listening.png)
+   ![На порту 22 больше нет слушающего сокета](screenshots/ssh-port-22-not-listening.png)
 
    При проверке из Windows команда `ssh -p 22 labuser@192.168.56.101` вернула `Connection refused`.
 
@@ -190,7 +190,7 @@ ssh -p 6262 labuser@192.168.56.101
 
 В консоли Debian повторно выполнил `sudo fail2ban-client status sshd`. Счётчик `Total failed` стал равен `3`, `Currently banned` — `1`, а в `Banned IP list` появился адрес Windows `192.168.56.1`.
 
-![Fail2ban заблокировал IP Windows после трёх ошибок входа](fail2ban-sshd-banned-windows-ip.png)
+![Fail2ban заблокировал IP Windows после трёх ошибок входа](screenshots/fail2ban-sshd-banned-windows-ip.png)
 
 Новое подключение из Windows к `6262` завершилось сообщением `Connection timed out`. Снял тестовую блокировку через консоль Debian в VirtualBox.
 
@@ -209,7 +209,7 @@ sudo grep -E '\[sshd\] (Found|Ban|Unban)' /var/log/fail2ban.log
 
 Три записи `Found` соответствуют ошибкам входа, `Ban` — добавлению блокировки, `Unban` — её снятию.
 
-![Журнал обнаружения ошибок входа и блокировки IP](fail2ban-ssh-events.png)
+![Журнал обнаружения ошибок входа и блокировки IP](screenshots/fail2ban-ssh-events.png)
 
 ## Конфигурационные файлы
 
