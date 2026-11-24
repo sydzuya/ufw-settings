@@ -1,19 +1,19 @@
 # UFW Settings
 
-Пошаговая настройка UFW и защиты SSH с помощью Fail2ban на Debian 13.7. В лаборатории перенёс SSH с порта `22` на `6262`, проверил блокировку после трёх неверных паролей и восстановил доступ вручную.
+Пошаговая настройка UFW и защиты SSH с помощью Fail2ban на Debian 13.7. Я перенёс SSH с порта `22` на `6262`, проверил блокировку после трёх неверных паролей и восстановил доступ вручную.
 
-При повторении замените `labuser` на имя своей учётной записи Debian. Адреса и имя интерфейса в командах относятся к этому стенду.
+В командах и в копии конфигурации SSH замените `youruser` на имя своей учётной записи Debian. Подставьте свои IP-адреса и имя сетевого интерфейса.
 
-## Подготовка стенда
+## Исходная конфигурация
 
-В лаборатории использованы Debian 13.7 (Trixie) в Oracle VirtualBox и Windows 11 в качестве хоста. Сеть ВМ, первый вход по SSH и права `sudo` описаны в первом проекте. [Базовая настройка Debian](https://github.com/sydzuya/debian-server-setup).
+Debian 13.7 (Trixie) работает в Oracle VirtualBox на компьютере с Windows 11. Сеть ВМ, первый вход по SSH и права `sudo` описаны в первом проекте. [Базовая настройка Debian](https://github.com/sydzuya/debian-server-setup).
 
-| Параметр | Значение на стенде |
+| Параметр | Значение |
 | --- | --- |
 | Интерфейс Host-only в Debian | `enp0s8` |
 | Адрес Debian для SSH | `192.168.56.101/24` |
 | Адрес Windows в Host-only | `192.168.56.1` |
-| Учебный адрес для правила DENY | `192.168.1.100` |
+| Тестовый адрес для правила DENY | `192.168.1.100` |
 | Порт SSH в начале работы | `22/tcp` |
 | Итоговый порт SSH | `6262/tcp` |
 
@@ -58,7 +58,7 @@ UFW показал `Status: active`, запрет входящих и разре
 
 ### Блокировка отдельного IP
 
-Добавил правило для учебного адреса `192.168.1.100` и проверил список правил с номерами.
+Добавил правило для блокировки входящих подключений с адреса `192.168.1.100` и проверил список правил с номерами.
 
 ```bash
 sudo ufw deny from 192.168.1.100
@@ -67,7 +67,7 @@ sudo ufw status numbered
 
 В списке появилась строка `DENY IN` для этого источника.
 
-![Правило UFW для блокировки учебного IP](screenshots/ufw-deny-ip-status.png)
+![Правило UFW для блокировки адреса 192.168.1.100](screenshots/ufw-deny-ip-status.png)
 
 ### Проверка LIMIT на исходном порту
 
@@ -130,7 +130,7 @@ sudo ufw status numbered
 5. **В новом окне Windows PowerShell** проверил вход через новый порт. Ключ `-p` задаёт порт назначения.
 
    ```powershell
-   ssh -p 6262 labuser@192.168.56.101
+   ssh -p 6262 youruser@192.168.56.101
    ```
 
    Вход с паролем прошёл.
@@ -148,7 +148,7 @@ sudo ufw status numbered
 
    ![На порту 22 больше нет слушающего сокета](screenshots/ssh-port-22-not-listening.png)
 
-   При проверке из Windows команда `ssh -p 22 labuser@192.168.56.101` вернула `Connection refused`.
+   При проверке из Windows команда `ssh -p 22 youruser@192.168.56.101` вернула `Connection refused`.
 
    ![Подключение из Windows к старому порту 22 отклонено](screenshots/ssh-windows-port-22-refused.png)
 
@@ -204,7 +204,7 @@ sudo fail2ban-client status sshd
 Для теста держал открытой консоль Debian в VirtualBox. **Из Windows** начал SSH-подключение на `6262` и три раза ввёл неправильный пароль.
 
 ```powershell
-ssh -p 6262 labuser@192.168.56.101
+ssh -p 6262 youruser@192.168.56.101
 ```
 
 ![Три ошибки ввода пароля при тестовом подключении из Windows](screenshots/ssh-three-failed-passwords.png)
@@ -244,5 +244,5 @@ sudo grep -E '\[sshd\] (Found|Ban|Unban)' /var/log/fail2ban.log
 
 ## Конфигурационные файлы
 
-- Настройки SSH-клиента для итогового порта `6262`. Замените `labuser` своим именем и выполните `ssh -F configs/ssh-client.conf debianlab` из корня репозитория. [Конфигурация SSH-клиента](configs/ssh-client.conf).
+- Настройки SSH-клиента для итогового порта `6262`. Замените `youruser` своим именем и выполните `ssh -F configs/ssh-client.conf debian-server` из корня репозитория. [Конфигурация SSH-клиента](configs/ssh-client.conf).
 - Настройки Fail2ban для файла `/etc/fail2ban/jail.local`. [Конфигурация Fail2ban](configs/jail.local).
