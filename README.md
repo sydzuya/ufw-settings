@@ -1,4 +1,4 @@
-# debian-security-lab
+# UFW Settings
 
 Пошаговая настройка UFW и защиты SSH с помощью Fail2ban на Debian 13.7. В лаборатории перенёс SSH с порта `22` на `6262`, проверил блокировку после трёх неверных паролей и восстановил доступ вручную.
 
@@ -54,6 +54,8 @@ UFW показал `Status: active`, запрет входящих и разре
 
 После включения UFW я открыл новый SSH-сеанс из Windows и успешно вошёл в Debian.
 
+![Проверка входа по SSH из Windows после включения UFW](screenshots/ssh-after-ufw.png)
+
 ### Блокировка отдельного IP
 
 Добавил правило для учебного адреса `192.168.1.100` и проверил список правил с номерами.
@@ -94,7 +96,10 @@ sudo ufw status numbered
 
    ```bash
    sudo ufw allow in on enp0s8 proto tcp from 192.168.56.1 to any port 6262
+   sudo ufw status numbered
    ```
+
+   ![Правило UFW для входа из Windows на порт 6262](screenshots/ufw-allow-ssh-6262.png)
 
 3. Открыл конфигурацию SSH и на время проверки указал оба порта.
 
@@ -106,6 +111,8 @@ sudo ufw status numbered
    Port 22
    Port 6262
    ```
+
+   ![Оба порта SSH указаны в sshd_config на время перехода](screenshots/ssh-config-both-ports.png)
 
 4. Проверил синтаксис, применил настройки и посмотрел слушающие сокеты.
 
@@ -128,6 +135,8 @@ sudo ufw status numbered
 
    Вход с паролем прошёл.
 
+   ![Успешный вход из Windows на порт 6262](screenshots/ssh-login-windows-6262.png)
+
 6. После проверки входа удалил строку `Port 22` из `/etc/ssh/sshd_config`, оставив `Port 6262`. Перезапустил службу и проверил старый порт в Debian.
 
    ```bash
@@ -140,6 +149,8 @@ sudo ufw status numbered
    ![На порту 22 больше нет слушающего сокета](screenshots/ssh-port-22-not-listening.png)
 
    При проверке из Windows команда `ssh -p 22 labuser@192.168.56.101` вернула `Connection refused`.
+
+   ![Подключение из Windows к старому порту 22 отклонено](screenshots/ssh-windows-port-22-refused.png)
 
 Для удаления прежнего правила `LIMIT` из UFW используется команда, которая указывает все параметры этого правила.
 
@@ -167,6 +178,8 @@ findtime = 600
 bantime = 3600
 ```
 
+![Параметры секции sshd в jail.local в редакторе Nano](screenshots/fail2ban-jail-local-editor.png)
+
 Настройка `sshd` отслеживает ошибки входа в системном журнале. При трёх ошибках с одного IP за десять минут Fail2ban добавляет через UFW блокировку этого адреса на час. [Справка по настройкам Fail2ban](https://manpages.debian.org/trixie/fail2ban/jail.conf.5.en.html).
 
 Проверил конфигурацию, перезапустил службу, включил автозапуск и посмотрел статус защиты SSH.
@@ -178,7 +191,13 @@ sudo systemctl enable fail2ban
 sudo fail2ban-client status sshd
 ```
 
-Проверка конфигурации вернула `OK: configuration test is successful`. Статус показал запущенную настройку защиты `sshd` с чтением системного журнала.
+Проверка конфигурации вернула `OK: configuration test is successful`.
+
+![Успешная проверка конфигурации Fail2ban](screenshots/fail2ban-config-test-ok.png)
+
+В статусе `sshd` виден фильтр системного журнала. До теста счётчики ошибок и блокировок были равны нулю.
+
+![Статус Fail2ban до теста блокировки](screenshots/fail2ban-sshd-status-initial.png)
 
 ### Проверка блокировки и восстановления доступа
 
@@ -188,17 +207,29 @@ sudo fail2ban-client status sshd
 ssh -p 6262 labuser@192.168.56.101
 ```
 
+![Три ошибки ввода пароля при тестовом подключении из Windows](screenshots/ssh-three-failed-passwords.png)
+
 В консоли Debian повторно выполнил `sudo fail2ban-client status sshd`. Счётчик `Total failed` стал равен `3`, `Currently banned` — `1`, а в `Banned IP list` появился адрес Windows `192.168.56.1`.
 
 ![Fail2ban заблокировал IP Windows после трёх ошибок входа](screenshots/fail2ban-sshd-banned-windows-ip.png)
 
-Новое подключение из Windows к `6262` завершилось сообщением `Connection timed out`. Снял тестовую блокировку через консоль Debian в VirtualBox.
+Новое подключение из Windows к `6262` завершилось сообщением `Connection timed out`.
+
+![Подключение к SSH истекло по тайм-ауту во время блокировки](screenshots/ssh-6262-timeout-while-banned.png)
+
+Снял тестовую блокировку через консоль Debian в VirtualBox.
 
 ```bash
 sudo fail2ban-client set sshd unbanip 192.168.56.1
 ```
 
-Команда вернула `1`. После этого новый вход из Windows с правильным паролем прошёл.
+Команда вернула `1`, то есть Fail2ban снял блокировку с одного адреса.
+
+![Fail2ban снял блокировку с IP Windows](screenshots/fail2ban-unban-windows-ip.png)
+
+После этого новый вход из Windows с правильным паролем прошёл.
+
+![Успешный вход на порт 6262 после снятия блокировки](screenshots/ssh-login-6262-after-unban.png)
 
 Посмотрел последние строки журнала и отобрал события SSH для отчёта.
 
